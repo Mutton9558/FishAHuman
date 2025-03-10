@@ -3,6 +3,7 @@
 -- each human -> 10 corals
 -- different poles -> different amount of corals
 -- powerups and more in shop
+-- seaweed colour: #3d800f
 
 function love.load()
 
@@ -12,15 +13,19 @@ function love.load()
     logo = love.image.newImageData('sprites/logo.png')
     background = love.graphics.newImage('sprites/background.png')
     menuSign = love.graphics.newImage('sprites/sign.png')
+    fisherman = love.graphics.newImage('sprites/fisherman.png')
+    shop = love.graphics.newImage('sprites/shop.png')
+    fishermanX, fishermanY = fisherman:getDimensions()
 
     love.window.setIcon(logo)
     font = love.graphics.newFont(32)
     love.graphics.setFont(font)
 
     player = {}
-    player.x = screenWidth * 0.5 - 25
-    player.y = screenHeight - 100
+    player.x = screenWidth * 0.5
+    player.y = screenHeight - 10
     player.speed = 5
+    movingRight = false
 
     scenes = {"MainMenu", "FishArea", "Shop"}
     curScene = scenes[1]
@@ -29,6 +34,8 @@ function love.load()
     
     background:setFilter("nearest", "nearest")
     menuSign:setFilter("nearest", "nearest")
+    fisherman:setFilter("nearest", "nearest")
+    shop:setFilter("nearest", "nearest")
     isEscaped = false
 
     mouseLeftClick = love.mouse.isDown(1)
@@ -36,17 +43,38 @@ function love.load()
     humanDisplayed = false
 end
 
+function fishEvent()
+    bar = {}
+    bar.x = 100
+    bar.y = 300
+    bar.width = 20
+    bar.height = 300
+    bar.successWidth = math.random(0, 80)
+    bar.successZoneY = math.random(0, 300-successWidth-1)
+
+    fishingCursorX = bar.x
+    fishingCursorSpeed = 10
+    fishingCursorMovingTop = true
+    fishingCursorMoving = true
+end
+
 function love.update(dt)
     if (curScene ~= "MainMenu" and not isEscaped) then
         if love.keyboard.isDown("a", "left") and love.keyboard.isDown("d", "right") then
             return
         elseif love.keyboard.isDown("d", "right") then
-            player.x = player.x + player.speed
+            if curScene == "Shop" and math.floor(player.x) >= screenWidth - (fishermanX*fishermanScaleX*0.25) then
+                return
+            else
+                player.x = player.x + player.speed
+                movingRight = false
+            end
         elseif love.keyboard.isDown("a", "left") then
-            if curScene == "FishArea" and math.floor(player.x) <= 0 then
+            if curScene == "FishArea" and math.floor(player.x) <= 0 + (fishermanX*math.abs(fishermanScaleX)*0.25) then
                 return
             else
                 player.x = player.x - player.speed
+                movingRight = true
             end
         end
 
@@ -66,10 +94,11 @@ function love.keypressed(key, scancode, isrepeat)
             love.window.setFullscreen(false, "desktop")
         else
             love.window.setFullscreen(true, "desktop")
-        end   
+        end
+        oldScreenWidth, oldScreenHeight = screenWidth, screenHeight
         screenWidth, screenHeight = love.graphics.getDimensions()
-        player.x = screenWidth * 0.5 - 25
-        player.y = screenHeight - 100
+        player.x = (player.x/oldScreenWidth)*screenWidth
+        player.y = (player.y/oldScreenHeight)*screenHeight
     end
 end
 
@@ -82,7 +111,6 @@ function registerMouseAction(event)
 end
 
 function love.draw()
-    
 
     local bgWidth, bgHeight = background:getDimensions()
     
@@ -93,8 +121,6 @@ function love.draw()
     love.graphics.print("Current FPS: "..tostring(love.timer.getFPS()), 10, 10, 0, 0.5, 0.5)
 
     if curScene ~= "MainMenu" then
-        love.graphics.rectangle("fill", player.x, player.y, 50,50)
-        
         if curScene == "FishArea" then
             love.graphics.print("Fishing", screenWidth*0.5-(font:getWidth("Fishing")/2), 100)
             if humanObtained ~= nil then
@@ -109,7 +135,15 @@ function love.draw()
             end
         else
             love.graphics.print("Shop", screenWidth*0.5-(font:getWidth("Shop")/2), 100)
+            local shopPosX, shopPosY = shop:getDimensions()
+            love.graphics.draw(shop, (screenWidth-(shopPosX*1.5)), (screenHeight-(shopPosY*1.5)-50), 0, 1.5, 1.5)
         end
+        if movingRight then
+            fishermanScaleX = -6
+        else
+            fishermanScaleX = 6
+        end
+        love.graphics.draw(fisherman, player.x - (fishermanX*fishermanScaleX*0.5), player.y - (fishermanY*5), 0, fishermanScaleX, 5)
     else
 
         local menuWidth, menuHeight = menuSign:getDimensions()
@@ -167,3 +201,4 @@ function love.mousepressed(x, y, button, istouch, presses)
         end
     end
 end
+
